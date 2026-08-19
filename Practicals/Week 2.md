@@ -213,6 +213,24 @@ campus.add_edge("Medical Room", "Assembly Point")
 print("Nodes:", campus.number_of_nodes())
 print("Edges:", campus.number_of_edges())          # 8 -> 10
 print("Is it still a tree?", nx.is_tree(campus))    # False now
+
+plt.figure(figsize=(10, 6))
+
+pos = nx.spring_layout(campus, seed=42)
+
+nx.draw(
+    campus,
+    pos,
+    with_labels=True,
+    node_color="lightblue",
+    node_size=2500,
+    font_size=10,
+    font_weight="bold",
+    edge_color="gray"
+)
+
+plt.title("Campus Evacuation Graph")
+plt.show()
 ```
 
 ```mermaid
