@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BFS &amp; DFS Visualizer — Learn Tree Traversal Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F6FB;
+    --grid-line:#E2E9F6;
+    --ink:#1E293B;
+    --ink-soft:#5A6B85;
+    --ink-faint:#8A97AC;
+    --white:#FFFFFF;
+
+    --blue:#3457A6;
+    --blue-soft:#DCE6FA;
+    --blue-line:#B9CBF0;
+
+    --purple:#7C4FD1;
+    --purple-soft:#ECE3FB;
+    --purple-line:#D2C0F5;
+
+    --orange:#E8863C;
+    --orange-soft:#FCE6D2;
+
+    --green:#2F9E62;
+    --green-soft:#DBF1E5;
+
+    --radius:14px;
+    --radius-sm:9px;
+    --shadow: 0 2px 14px rgba(30,41,59,0.07);
+    --shadow-lift: 0 8px 24px rgba(30,41,59,0.12);
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{margin:0;padding:0;}
+
+  body{
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    line-height:1.5;
+    padding: 28px 20px 60px;
+  }
+
+  h1,h2,h3{
+    font-family:'Space Grotesk', sans-serif;
+    margin:0;
+    color:var(--ink);
+  }
+
+  .page{
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header.top{
+    text-align:center;
+    margin-bottom: 26px;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.06em;
+    color:var(--blue);
+    background:var(--blue-soft);
+    border:1px solid var(--blue-line);
+    padding:5px 12px;
+    border-radius:999px;
+    margin-bottom:14px;
+  }
+  header.top h1{
+    font-size: clamp(28px, 4vw, 40px);
+    margin-bottom:10px;
+  }
+  header.top p{
+    color:var(--ink-soft);
+    font-size:15.5px;
+    max-width:560px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Intro cards: what is queue/stack ---------- */
+  .intro-cards{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin: 26px 0;
+  }
+  .intro-card{
+    background:var(--white);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+    border-top:4px solid var(--blue);
+  }
+  .intro-card.stack{ border-top-color:var(--purple); }
+  .intro-card h3{
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .intro-card .tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    background:var(--blue-soft);
+    color:var(--blue);
+    padding:2px 8px;
+    border-radius:999px;
+  }
+  .intro-card.stack .tag{background:var(--purple-soft); color:var(--purple);}
+  .intro-card p{
+    font-size:14px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    background:var(--white);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px 20px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:18px;
+    margin-bottom: 20px;
+  }
+  .tabs{
+    display:flex;
+    background:var(--paper);
+    border:1px solid var(--grid-line);
+    border-radius:999px;
+    padding:3px;
+  }
+  .tab-btn{
+    border:none;
+    background:transparent;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:8px 18px;
+    border-radius:999px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    transition: all .15s ease;
+  }
+  .tab-btn.active{
+    background:var(--blue);
+    color:#fff;
+    box-shadow:0 2px 8px rgba(52,87,166,0.35);
+  }
+  .tab-btn.active.dfs-active{
+    background:var(--purple);
+    box-shadow:0 2px 8px rgba(124,79,209,0.35);
+  }
+
+  .control-group{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+  }
+  .control-group label{font-weight:600; color:var(--ink); white-space:nowrap;}
+  input[type=range]{
+    accent-color: var(--blue);
+    width:120px;
+    cursor:pointer;
+  }
+  .pill-value{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--paper);
+    border:1px solid var(--grid-line);
+    border-radius:6px;
+    padding:2px 8px;
+    font-size:12.5px;
+    min-width:22px;
+    text-align:center;
+  }
+
+  button.btn{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    border-radius:9px;
+    border:1px solid var(--grid-line);
+    background:var(--white);
+    color:var(--ink);
+    padding:8px 14px;
+    cursor:pointer;
+    transition: transform .1s ease, box-shadow .15s ease;
+  }
+  button.btn:hover{ box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  button.btn:active{ transform: translateY(0); }
+  button.btn.primary{
+    background:var(--blue);
+    color:#fff;
+    border-color:var(--blue);
+  }
+  button.btn:disabled{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none;}
+
+  .playback{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .playback .step-count{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    padding:0 8px;
+    white-space:nowrap;
+  }
+  .icon-btn{
+    width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:9px;
+    border:1px solid var(--grid-line);
+    background:var(--white);
+    cursor:pointer;
+    font-size:15px;
+  }
+  .icon-btn:hover{background:var(--paper);}
+  .icon-btn.play{background:var(--blue); color:#fff; border-color:var(--blue);}
+
+  /* ---------- Main grid ---------- */
+  .main-grid{
+    display:grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap:18px;
+    align-items:start;
+  }
+
+  .panel{
+    background:var(--white);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+  }
+  .panel-title{
+    font-size:14.5px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .panel-title .badge{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:400;
+    color:var(--ink-faint);
+  }
+
+  .tree-scroll{
+    overflow-x:auto;
+    border-radius:var(--radius-sm);
+  }
+  svg#treeSvg{
+    display:block;
+    width:100%;
+    height:auto;
+    min-width:420px;
+  }
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px dashed var(--grid-line);
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .legend-dot{width:13px;height:13px;border-radius:50%; border:2px solid; display:inline-block;}
+
+  /* ---------- Side panel ---------- */
+  .side-panel{display:flex; flex-direction:column; gap:18px;}
+
+  .narrator{
+    border-left:4px solid var(--orange);
+    background: var(--orange-soft);
+    border-radius: var(--radius-sm);
+    padding:14px 16px;
+    min-height:52px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .narrator .pencil{font-size:18px;}
+  .narrator p{margin:0; font-size:14.5px; color:#7a4413; font-weight:500;}
+
+  .structure-card .panel-title{margin-bottom:16px;}
+
+  /* queue row */
+  .queue-track{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:70px;
+    overflow-x:auto;
+    padding: 4px 2px 8px;
+  }
+  .queue-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--blue);
+    letter-spacing:.05em;
+    margin-bottom:2px;
+  }
+  .box{
+    min-width:46px;
+    height:46px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:16px;
+    flex-shrink:0;
+    animation: popIn .25s ease;
+    border:2px solid var(--blue);
+    background:var(--blue-soft);
+    color:var(--blue);
+  }
+  .box.stack-box{
+    border-color:var(--purple);
+    background:var(--purple-soft);
+    color:var(--purple);
+    width:100%;
+  }
+  .empty-note{
+    font-size:13px;
+    color:var(--ink-faint);
+    font-style:italic;
+  }
+
+  /* stack column */
+  .stack-track{
+    display:flex;
+    flex-direction:column-reverse;
+    gap:8px;
+    min-height:70px;
+    max-height:260px;
+    overflow-y:auto;
+    padding:4px;
+  }
+  .stack-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--purple);
+    letter-spacing:.05em;
+  }
+
+  @keyframes popIn{
+    from{ transform:scale(.5); opacity:0; }
+    to{ transform:scale(1); opacity:1; }
+  }
+
+  /* step log */
+  .log-list{
+    list-style:none;
+    margin:0; padding:0;
+    max-height:220px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .log-list li{
+    font-size:12.5px;
+    padding:7px 10px;
+    border-radius:7px;
+    background:var(--paper);
+    color:var(--ink-soft);
+    display:flex;
+    gap:8px;
+  }
+  .log-list li.current{
+    background:var(--blue);
+    color:#fff;
+    font-weight:600;
+  }
+  .log-list li .idx{
+    font-family:'JetBrains Mono',monospace;
+    opacity:.6;
+    min-width:20px;
+  }
+
+  /* ---------- Sandbox ---------- */
+  .sandbox{margin-top: 36px;}
+  .sandbox > h2{
+    font-size:22px;
+    text-align:center;
+    margin-bottom:4px;
+  }
+  .sandbox > p.sub{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+    margin:0 0 20px;
+  }
+  .sandbox-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+  }
+  .sandbox-card{
+    background:var(--white);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+  }
+  .sandbox-card h3{
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:4px;
+  }
+  .sandbox-card .hint{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+  }
+  .sandbox-input-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .sandbox-input-row input[type=text]{
+    flex:1;
+    min-width:0;
+    border:1px solid var(--grid-line);
+    border-radius:8px;
+    padding:9px 12px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    background:var(--paper);
+  }
+  .sandbox-input-row input[type=text]:focus{
+    outline:2px solid var(--blue);
+    outline-offset:1px;
+  }
+  .stack-sandbox .sandbox-input-row input:focus{outline-color:var(--purple);}
+
+  .sandbox-visual{
+    background:var(--paper);
+    border-radius:var(--radius-sm);
+    border:1px dashed var(--grid-line);
+    padding:14px;
+    min-height:110px;
+  }
+
+  footer{
+    text-align:center;
+    margin-top: 36px;
+    color:var(--ink-faint);
+    font-size:12.5px;
+  }
+
+  @media (max-width: 900px){
+    .main-grid{grid-template-columns:1fr;}
+    .intro-cards{grid-template-columns:1fr;}
+    .sandbox-grid{grid-template-columns:1fr;}
+    .playback{margin-left:0; width:100%; justify-content:center; margin-top:8px;}
+    .controls{justify-content:center;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <span class="eyebrow">🌳 DSA for Beginners</span>
+    <h1>Breadth-First &amp; Depth-First Search, Visually</h1>
+    <p>Watch how a computer explores a tree, one tiny step at a time — and see exactly why a Queue and a Stack behave differently.</p>
+  </header>
+
+  <section class="intro-cards">
+    <div class="intro-card queue">
+      <h3>🚶 Queue <span class="tag">FIFO — First In, First Out</span></h3>
+      <p>Think of a canteen line. Whoever joins first, gets served first. BFS uses a Queue, so it explores the tree level by level.</p>
+    </div>
+    <div class="intro-card stack">
+      <h3>🍽️ Stack <span class="tag">LIFO — Last In, First Out</span></h3>
+      <p>Think of a stack of plates. You can only take the top one off. DFS uses a Stack, so it dives deep down one path before backing up.</p>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabBfs" onclick="setAlgo('bfs')">BFS (Queue)</button>
+      <button class="tab-btn" id="tabDfs" onclick="setAlgo('dfs')">DFS (Stack)</button>
+    </div>
+
+    <div class="control-group">
+      <label for="nodeSlider">Nodes</label>
+      <input type="range" id="nodeSlider" min="3" max="15" value="10">
+      <span class="pill-value" id="nodeCountLabel">10</span>
+    </div>
+
+    <button class="btn" onclick="regenerateTree()">🔀 New Tree</button>
+
+    <div class="control-group">
+      <label for="speedSlider">Speed</label>
+      <input type="range" id="speedSlider" min="1" max="5" value="3">
+    </div>
+
+    <div class="playback">
+      <button class="icon-btn" id="prevBtn" onclick="stepBack()" title="Previous step">◀</button>
+      <button class="icon-btn play" id="playBtn" onclick="togglePlay()" title="Play / Pause">▶</button>
+      <button class="icon-btn" id="nextBtn" onclick="stepForward()" title="Next step">▶|</button>
+      <button class="icon-btn" onclick="resetSteps()" title="Reset">⟲</button>
+      <span class="step-count" id="stepCount">0 / 0</span>
+    </div>
+  </section>
+
+  <section class="main-grid">
+    <div class="panel tree-panel">
+      <div class="panel-title">Tree <span class="badge" id="algoBadge">Running: BFS</span></div>
+      <div class="tree-scroll">
+        <svg id="treeSvg" viewBox="0 0 600 300"></svg>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="border-color:var(--blue-line); background:#fff;"></span>Not visited yet</div>
+        <div class="legend-item"><span class="legend-dot" style="border-color:var(--orange); background:var(--orange-soft);"></span>In queue / stack</div>
+        <div class="legend-item"><span class="legend-dot" style="border-color:var(--orange); background:var(--orange);"></span>Being visited now</div>
+        <div class="legend-item"><span class="legend-dot" style="border-color:var(--green); background:var(--green);"></span>Already visited</div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="narrator">
+        <span class="pencil">✏️</span>
+        <p id="narratorText">Press ▶ Play or ▶| Next to begin the traversal.</p>
+      </div>
+
+      <div class="panel structure-card">
+        <div class="panel-title" id="structureTitle">Queue <span class="badge">front → back</span></div>
+        <div id="structureBody"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Every step taken <span class="badge" id="logCountBadge">0 actions</span></div>
+        <ul class="log-list" id="logList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sandbox">
+    <h2>Practice area</h2>
+    <p class="sub">Play with a Queue and a Stack yourself — add and remove values to see FIFO vs LIFO in action.</p>
+    <div class="sandbox-grid">
+      <div class="sandbox-card queue-sandbox">
+        <h3>🚶 Queue playground</h3>
+        <p class="hint">Type a value, then <b>Enqueue</b> to add it to the back. <b>Dequeue</b> removes from the front.</p>
+        <div class="sandbox-input-row">
+          <input type="text" id="queueInput" maxlength="6" placeholder="e.g. 7">
+          <button class="btn primary" onclick="sandboxEnqueue()">Enqueue »</button>
+          <button class="btn" onclick="sandboxDequeue()">« Dequeue</button>
+        </div>
+        <div class="queue-labels"><span>FRONT</span><span>BACK</span></div>
+        <div class="sandbox-visual">
+          <div class="queue-track" id="sandboxQueueTrack"></div>
+        </div>
+      </div>
+
+      <div class="sandbox-card stack-sandbox">
+        <h3>🍽️ Stack playground</h3>
+        <p class="hint">Type a value, then <b>Push</b> to place it on top. <b>Pop</b> removes the top one.</p>
+        <div class="sandbox-input-row">
+          <input type="text" id="stackInput" maxlength="6" placeholder="e.g. 7">
+          <button class="btn" style="background:var(--purple);color:#fff;border-color:var(--purple);" onclick="sandboxPush()">Push ▲</button>
+          <button class="btn" onclick="sandboxPop()">Pop ▼</button>
+        </div>
+        <div class="stack-labels"><span>◀ TOP (here)</span><span>BOTTOM ▶</span></div>
+        <div class="sandbox-visual">
+          <div class="stack-track" id="sandboxStackTrack" style="flex-direction:row; flex-wrap:wrap-reverse;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Built for first-year students — refresh the page any time for a brand new tree. Pure HTML, CSS &amp; JavaScript, runs entirely in your browser.</footer>
+</div>
+
+<script>
+/* ============================================================
+   TREE GENERATION
+   Nodes stored as a heap-style array: child of i are 2i+1, 2i+2
+============================================================ */
+let N = 10;
+let nodes = [];   // {id, label, left, right, x, y, depth}
+let edges = [];   // {from, to, offset}
+let algo = 'bfs';
+let actions = [];
+let stepIndex = 0;
+let playing = false;
+let playTimer = null;
+
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+
+function shuffledLabels(count){
+  const arr = ALPHABET.slice();
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr.slice(0,count);
+}
+
+function buildTree(n){
+  const labels = shuffledLabels(n);
+  nodes = [];
+  for(let i=0;i<n;i++){
+    nodes.push({
+      id:i,
+      label: labels[i],
+      left: (2*i+1 < n) ? 2*i+1 : null,
+      right: (2*i+2 < n) ? 2*i+2 : null,
+      depth: Math.floor(Math.log2(i+1)),
+      xSlot: 0
+    });
+  }
+
+  let slot = 0;
+  function assign(id){
+    if(id === null || id === undefined) return;
+    assign(nodes[id].left);
+    nodes[id].xSlot = slot++;
+    assign(nodes[id].right);
+  }
+  assign(0);
+
+  const spacingX = 68;
+  const spacingY = 92;
+  const padX = 50, padY = 46;
+
+  nodes.forEach(nd=>{
+    nd.x = padX + nd.xSlot*spacingX;
+    nd.y = padY + nd.depth*spacingY;
+  });
+
+  edges = [];
+  nodes.forEach(nd=>{
+    if(nd.left !== null) edges.push({from:nd.id, to:nd.left, offset:(Math.random()-0.5)*24});
+    if(nd.right !== null) edges.push({from:nd.id, to:nd.right, offset:(Math.random()-0.5)*24});
+  });
+
+  const maxXSlot = n-1;
+  const maxDepth = nodes.reduce((m,nd)=>Math.max(m,nd.depth),0);
+  const svgW = padX*2 + maxXSlot*spacingX + 20;
+  const svgH = padY*2 + maxDepth*spacingY + 20;
+  const svg = document.getElementById('treeSvg');
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+}
+
+function getChildren(id){
+  const nd = nodes[id];
+  const out = [];
+  if(nd.left !== null) out.push(nd.left);
+  if(nd.right !== null) out.push(nd.right);
+  return out;
+}
+function labelOf(id){ return nodes[id].label; }
+
+/* ============================================================
+   ACTION GENERATION (every single move)
+============================================================ */
+function computeBfsActions(){
+  const acts = [];
+  const queue = [0];
+  acts.push({type:'enqueue', node:0, parent:null, queueSnapshot:[...queue],
+    desc:`Start: put root node ${labelOf(0)} into the queue.`});
+  while(queue.length){
+    const node = queue.shift();
+    acts.push({type:'dequeue', node, parent:null, queueSnapshot:[...queue],
+      desc:`Remove ${labelOf(node)} from the FRONT of the queue.`});
+    acts.push({type:'visit', node, parent:null, queueSnapshot:[...queue],
+      desc:`Visit ${labelOf(node)} — mark it as visited.`});
+    for(const c of getChildren(node)){
+      queue.push(c);
+      acts.push({type:'enqueue', node:c, parent:node, queueSnapshot:[...queue],
+        desc:`Add child ${labelOf(c)} of ${labelOf(node)} to the BACK of the queue.`});
+    }
+  }
+  return acts;
+}
+
+function computeDfsActions(){
+  const acts = [];
+  const stack = [0];
+  acts.push({type:'push', node:0, parent:null, stackSnapshot:[...stack],
+    desc:`Start: push root node ${labelOf(0)} onto the stack.`});
+  while(stack.length){
+    const node = stack.pop();
+    acts.push({type:'pop', node, parent:null, stackSnapshot:[...stack],
+      desc:`Pop ${labelOf(node)} off the TOP of the stack.`});
+    acts.push({type:'visit', node, parent:null, stackSnapshot:[...stack],
+      desc:`Visit ${labelOf(node)} — mark it as visited.`});
+    const children = getChildren(node).slice().reverse(); // so left ends up on top
+    for(const c of children){
+      stack.push(c);
+      acts.push({type:'push', node:c, parent:node, stackSnapshot:[...stack],
+        desc:`Push child ${labelOf(c)} of ${labelOf(node)} onto the stack.`});
+    }
+  }
+  return acts;
+}
+
+function recomputeActions(){
+  actions = (algo === 'bfs') ? computeBfsActions() : computeDfsActions();
+  stepIndex = 0;
+}
+
+/* ============================================================
+   STATE DERIVATION
+============================================================ */
+function getStateAt(idx){
+  const visited = new Set();
+  const discovered = new Set();
+  let snapshot = [];
+  for(let i=0;i<idx;i++){
+    const a = actions[i];
+    if(a.type === 'visit') visited.add(a.node);
+    if(a.type === 'enqueue' || a.type === 'push') discovered.add(a.node);
+    snapshot = a.queueSnapshot || a.stackSnapshot || snapshot;
+  }
+  discovered.forEach(id => { if(visited.has(id)) discovered.delete(id); });
+  let current = null, currentParent = null, lastType = null;
+  if(idx > 0){
+    current = actions[idx-1].node;
+    currentParent = actions[idx-1].parent;
+    lastType = actions[idx-1].type;
+  }
+  return {visited, discovered, current, currentParent, lastType, snapshot};
+}
+
+/* ============================================================
+   RENDERING — Tree
+============================================================ */
+function renderTree(){
+  const state = getStateAt(stepIndex);
+  const svg = document.getElementById('treeSvg');
+  svg.innerHTML = '';
+  const ns = "http://www.w3.org/2000/svg";
+
+  edges.forEach(e=>{
+    const a = nodes[e.from], b = nodes[e.to];
+    const mx = (a.x+b.x)/2 + e.offset;
+    const my = (a.y+b.y)/2;
+    const path = document.createElementNS(ns,'path');
+    path.setAttribute('d', `M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`);
+    const isActiveEdge = state.currentParent === e.from && state.current === e.to;
+    path.setAttribute('stroke', isActiveEdge ? 'var(--orange)' : '#C7D3E8');
+    path.setAttribute('stroke-width', isActiveEdge ? '3' : '2');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  });
+
+  nodes.forEach(nd=>{
+    const g = document.createElementNS(ns,'g');
+    const circle = document.createElementNS(ns,'circle');
+    circle.setAttribute('cx', nd.x);
+    circle.setAttribute('cy', nd.y);
+    circle.setAttribute('r', 20);
+
+    let fill = '#FFFFFF', stroke = '#B9CBF0', textColor = 'var(--ink)';
+    if(state.visited.has(nd.id)){
+      fill = 'var(--green)'; stroke = 'var(--green)'; textColor = '#fff';
+    } else if(state.current === nd.id && state.lastType === 'visit'){
+      fill = 'var(--orange)'; stroke = 'var(--orange)'; textColor = '#fff';
+    } else if(state.current === nd.id){
+      fill = 'var(--orange-soft)'; stroke = 'var(--orange)'; textColor = '#7a4413';
+    } else if(state.discovered.has(nd.id)){
+      fill = 'var(--orange-soft)'; stroke = 'var(--orange)'; textColor = '#7a4413';
+    }
+    circle.setAttribute('fill', fill);
+    circle.setAttribute('stroke', stroke);
+    circle.setAttribute('stroke-width', (state.current===nd.id) ? '3.5' : '2');
+    g.appendChild(circle);
+
+    if(state.current === nd.id){
+      const pulse = document.createElementNS(ns,'circle');
+      pulse.setAttribute('cx', nd.x); pulse.setAttribute('cy', nd.y); pulse.setAttribute('r', 20);
+      pulse.setAttribute('fill','none'); pulse.setAttribute('stroke','var(--orange)');
+      pulse.setAttribute('stroke-width','2'); pulse.setAttribute('opacity','0.5');
+      const anim = document.createElementNS(ns,'animate');
+      anim.setAttribute('attributeName','r'); anim.setAttribute('values','20;28;20');
+      anim.setAttribute('dur','1.2s'); anim.setAttribute('repeatCount','indefinite');
+      const anim2 = document.createElementNS(ns,'animate');
+      anim2.setAttribute('attributeName','opacity'); anim2.setAttribute('values','0.5;0;0.5');
+      anim2.setAttribute('dur','1.2s'); anim2.setAttribute('repeatCount','indefinite');
+      pulse.appendChild(anim); pulse.appendChild(anim2);
+      g.appendChild(pulse);
+    }
+
+    const text = document.createElementNS(ns,'text');
+    text.setAttribute('x', nd.x); text.setAttribute('y', nd.y+5);
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-family',"'JetBrains Mono', monospace");
+    text.setAttribute('font-weight','700');
+    text.setAttribute('font-size','14');
+    text.setAttribute('fill', textColor);
+    text.textContent = nd.label;
+    g.appendChild(text);
+
+    svg.appendChild(g);
+  });
+}
+
+/* ---------- Rendering — Queue / Stack panel ---------- */
+function renderStructure(){
+  const state = getStateAt(stepIndex);
+  const title = document.getElementById('structureTitle');
+  const body = document.getElementById('structureBody');
+  const badge = document.getElementById('algoBadge');
+
+  if(algo === 'bfs'){
+    title.innerHTML = 'Queue <span class="badge">front → back</span>';
+    badge.textContent = 'Running: BFS';
+    if(state.snapshot.length === 0){
+      body.innerHTML = `<div class="queue-track"><span class="empty-note">Queue is empty</span></div>`;
+    } else {
+      body.innerHTML = `<div class="queue-track">${state.snapshot.map(id=>
+        `<div class="box">${labelOf(id)}</div>`).join('')}</div>`;
+    }
+  } else {
+    title.innerHTML = 'Stack <span class="badge">top → bottom</span>';
+    badge.textContent = 'Running: DFS';
+    if(state.snapshot.length === 0){
+      body.innerHTML = `<div class="stack-track"><span class="empty-note">Stack is empty</span></div>`;
+    } else {
+      body.innerHTML = `<div class="stack-track">${state.snapshot.map(id=>
+        `<div class="box stack-box">${labelOf(id)}</div>`).join('')}</div>`;
+    }
+  }
+}
+
+/* ---------- Rendering — narrator + step count ---------- */
+function renderNarrator(){
+  const text = document.getElementById('narratorText');
+  const count = document.getElementById('stepCount');
+  count.textContent = `${stepIndex} / ${actions.length}`;
+  if(stepIndex === 0){
+    text.textContent = 'Press ▶ Play or ▶| Next to begin the traversal.';
+  } else if(stepIndex >= actions.length){
+    text.textContent = '✅ Traversal complete! Every node has been visited. Press ⟲ to run it again.';
+  } else {
+    text.textContent = actions[stepIndex-1].desc;
+  }
+  document.getElementById('prevBtn').disabled = stepIndex === 0;
+  document.getElementById('nextBtn').disabled = stepIndex >= actions.length;
+}
+
+/* ---------- Rendering — step log ---------- */
+function renderLog(){
+  const list = document.getElementById('logList');
+  document.getElementById('logCountBadge').textContent = `${stepIndex} of ${actions.length} actions`;
+  let html = '';
+  for(let i=0;i<stepIndex;i++){
+    const isLast = (i === stepIndex-1);
+    const icon = actions[i].type === 'visit' ? '✅' : (actions[i].type==='enqueue'||actions[i].type==='push') ? '➕' : '➖';
+    html += `<li class="${isLast?'current':''}"><span class="idx">${i+1}.</span><span>${icon} ${actions[i].desc}</span></li>`;
+  }
+  list.innerHTML = html || `<li><span class="empty-note">No steps taken yet.</span></li>`;
+  list.scrollTop = list.scrollHeight;
+}
+
+function renderAll(){
+  renderTree();
+  renderStructure();
+  renderNarrator();
+  renderLog();
+}
+
+/* ============================================================
+   CONTROLS
+============================================================ */
+function setAlgo(which){
+  algo = which;
+  document.getElementById('tabBfs').classList.toggle('active', which==='bfs');
+  document.getElementById('tabBfs').classList.remove('dfs-active');
+  document.getElementById('tabDfs').classList.toggle('active', which==='dfs');
+  if(which==='dfs') document.getElementById('tabDfs').classList.add('dfs-active');
+  stopPlay();
+  recomputeActions();
+  renderAll();
+}
+
+function regenerateTree(){
+  stopPlay();
+  buildTree(N);
+  recomputeActions();
+  renderAll();
+}
+
+function stepForward(){
+  if(stepIndex < actions.length){
+    stepIndex++;
+    renderAll();
+  }
+  if(stepIndex >= actions.length) stopPlay();
+}
+function stepBack(){
+  if(stepIndex > 0){
+    stepIndex--;
+    renderAll();
+  }
+}
+function resetSteps(){
+  stopPlay();
+  stepIndex = 0;
+  renderAll();
+}
+function togglePlay(){
+  if(playing){ stopPlay(); return; }
+  if(stepIndex >= actions.length) stepIndex = 0;
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸';
+  const speed = document.getElementById('speedSlider').value;
+  const delay = 1500 - (speed-1)*280; // 1500ms .. 380ms
+  playTimer = setInterval(()=>{
+    if(stepIndex >= actions.length){ stopPlay(); return; }
+    stepForward();
+  }, delay);
+}
+function stopPlay(){
+  playing = false;
+  document.getElementById('playBtn').textContent = '▶';
+  if(playTimer){ clearInterval(playTimer); playTimer = null; }
+}
+
+document.getElementById('nodeSlider').addEventListener('input', (e)=>{
+  N = parseInt(e.target.value);
+  document.getElementById('nodeCountLabel').textContent = N;
+});
+document.getElementById('nodeSlider').addEventListener('change', ()=>{
+  regenerateTree();
+});
+document.getElementById('speedSlider').addEventListener('change', ()=>{
+  if(playing){ stopPlay(); togglePlay(); }
+});
+
+/* ============================================================
+   SANDBOX — independent playground
+============================================================ */
+let sandboxQueue = ['3','9'];
+let sandboxStack = ['3','9'];
+
+function renderSandboxQueue(){
+  const track = document.getElementById('sandboxQueueTrack');
+  track.innerHTML = sandboxQueue.length
+    ? sandboxQueue.map(v=>`<div class="box">${v}</div>`).join('')
+    : `<span class="empty-note">Queue is empty — try Enqueue!</span>`;
+}
+function renderSandboxStack(){
+  const track = document.getElementById('sandboxStackTrack');
+  track.innerHTML = sandboxStack.length
+    ? sandboxStack.slice().reverse().map((v,i)=>`<div class="box stack-box" style="width:auto; min-width:46px;">${v}${i===0?' <span style=\"font-size:9px;opacity:.7\">(top)</span>':''}</div>`).join('')
+    : `<span class="empty-note">Stack is empty — try Push!</span>`;
+}
+
+function sandboxEnqueue(){
+  const input = document.getElementById('queueInput');
+  const val = input.value.trim();
+  if(!val) return;
+  sandboxQueue.push(val);
+  input.value = '';
+  renderSandboxQueue();
+}
+function sandboxDequeue(){
+  if(sandboxQueue.length === 0) return;
+  sandboxQueue.shift();
+  renderSandboxQueue();
+}
+function sandboxPush(){
+  const input = document.getElementById('stackInput');
+  const val = input.value.trim();
+  if(!val) return;
+  sandboxStack.push(val);
+  input.value = '';
+  renderSandboxStack();
+}
+function sandboxPop(){
+  if(sandboxStack.length === 0) return;
+  sandboxStack.pop();
+  renderSandboxStack();
+}
+
+document.getElementById('queueInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sandboxEnqueue(); });
+document.getElementById('stackInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sandboxPush(); });
+
+/* ============================================================
+   INIT
+============================================================ */
+buildTree(N);
+recomputeActions();
+renderAll();
+renderSandboxQueue();
+renderSandboxStack();
+</script>
+</body>
+</html>
