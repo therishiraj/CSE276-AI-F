@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en" data-algo="hc">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8-Puzzle Search Lab — Hill Climbing vs A*</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF2F5;
+    --surface:#FFFFFF;
+    --surface-alt:#F6F8FA;
+    --ink:#1B2430;
+    --ink-muted:#5B6B7A;
+    --ink-faint:#8A97A3;
+    --line:#D8E0E7;
+    --line-strong:#B9C6D1;
+
+    --hc:#B5560F;
+    --hc-soft:#FBEADA;
+    --hc-soft-strong:#F3D8B8;
+    --astar:#146068;
+    --astar-soft:#DCEEF0;
+    --astar-soft-strong:#BEDEE1;
+
+    --good:#2B7A4B;
+    --good-soft:#E1F1E6;
+    --bad:#AA3341;
+    --bad-soft:#F8E3E5;
+
+    --accent:var(--hc);
+    --accent-soft:var(--hc-soft);
+    --accent-soft-strong:var(--hc-soft-strong);
+
+    --radius-sm:6px;
+    --radius-md:10px;
+    --font-sans:'IBM Plex Sans', -apple-system, "Segoe UI", sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  html[data-algo="astar"]{
+    --accent:var(--astar);
+    --accent-soft:var(--astar-soft);
+    --accent-soft-strong:var(--astar-soft-strong);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%; margin:0; overflow:hidden;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font-sans);
+    font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+  }
+  h1,h2{font-family:var(--font-sans); margin:0;}
+  button,input{font-family:inherit;}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .tag{display:inline-block; font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:999px;}
+  .tag.good{background:var(--good); color:#fff;}
+  .tag.bad{background:var(--bad); color:#fff;}
+
+  /* ---------- Header ---------- */
+  .topbar{flex:0 0 auto; background:var(--surface); border-bottom:1px solid var(--line); padding:12px 20px;}
+  .topbar-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;}
+  .topbar-row h1{font-size:1.1rem; font-weight:700; letter-spacing:-0.01em;}
+  .controls-row{display:flex; align-items:center; gap:14px;}
+  .btn{border:1px solid var(--line); background:var(--surface); padding:7px 12px; border-radius:var(--radius-sm); font-weight:600; font-size:.85rem; cursor:pointer; color:var(--ink);}
+  .btn:hover{border-color:var(--line-strong);}
+  .btn.primary{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .field-inline{display:flex; align-items:center; gap:6px; font-size:.78rem; color:var(--ink-muted); white-space:nowrap;}
+  .field-inline .num{color:var(--ink); font-weight:600; font-family:var(--font-mono);}
+  .field-inline input[type=range]{width:110px; accent-color:var(--accent);}
+
+  .algo-toggle{display:flex; gap:8px;}
+  .algo-toggle button{flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line); background:var(--surface-alt); border-radius:var(--radius-sm); padding:8px 14px; cursor:pointer; color:var(--ink-muted); transition:background .15s ease, color .15s ease, border-color .15s ease;}
+  .algo-toggle .algo-name{font-weight:600; font-size:.9rem; color:var(--ink);}
+  .algo-toggle .algo-stat{font-family:var(--font-mono); font-size:.72rem;}
+  .algo-toggle button[aria-pressed="true"]{color:#fff; border-color:transparent;}
+  .algo-toggle button[aria-pressed="true"] .algo-name{color:#fff;}
+  .algo-toggle button.hc-btn[aria-pressed="true"]{background:var(--hc);}
+  .algo-toggle button.astar-btn[aria-pressed="true"]{background:var(--astar);}
+
+  /* ---------- Main ---------- */
+  main{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(240px,300px) 1fr; gap:16px; padding:14px 20px; overflow:hidden;}
+  @media (max-height:640px), (max-width:760px){ html,body{overflow:auto;} main{grid-template-columns:1fr;} }
+
+  .col{display:flex; flex-direction:column; min-height:0;}
+  .col-puzzle{justify-content:center;}
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px;}
+
+  .puzzle-panel{display:flex; flex-direction:column; align-items:center; gap:12px;}
+  .puzzle-grid{position:relative; width:min(100%, clamp(180px, 32vh, 260px)); aspect-ratio:1/1; background:var(--surface-alt); border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden;}
+  .tile{position:absolute; top:0; left:0; width:33.3333%; height:33.3333%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.5rem; background:var(--surface); border:1px solid var(--line); transition:transform .3s cubic-bezier(.4,0,.2,1), background .25s ease;}
+  .tile.is-blank{background:repeating-linear-gradient(45deg, var(--surface-alt), var(--surface-alt) 6px, var(--bg) 6px, var(--bg) 12px); border-style:dashed;}
+  .tile.is-moving{background:var(--accent-soft);}
+  .tile.movable{cursor:pointer;}
+  .tile.movable:hover{border-color:var(--accent);}
+  .tile.invalid{box-shadow:inset 0 0 0 2px var(--bad);}
+  @media (prefers-reduced-motion:reduce){ .tile{transition:none;} }
+
+  .readout-row{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .h-readout{display:flex; align-items:baseline; gap:6px;}
+  .h-readout .value{font-family:var(--font-mono); font-size:1.6rem; font-weight:600; color:var(--accent);}
+  .h-readout .caption{color:var(--ink-muted); font-size:.75rem;}
+  .goal-ref{display:flex; align-items:center; gap:6px; font-size:.7rem; color:var(--ink-faint);}
+  .click-hint{font-size:.68rem; color:var(--ink-faint); margin:0; text-align:center;}
+
+  .mini-grid{display:grid; grid-template-columns:repeat(3,1fr); width:38px; height:38px; gap:2px; flex:0 0 auto;}
+  .mini-grid .mt{background:var(--surface-alt); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.55rem; border-radius:2px;}
+  .mini-grid .mt.blank{background:transparent; border-style:dashed;}
+
+  .detail-panel{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;}
+  .detail-panel h2{font-size:.92rem; font-weight:600;}
+  .step-caption{font-size:.83rem; color:var(--ink-muted); margin:6px 0 0;}
+  .stat-chips{display:flex; gap:8px; margin:10px 0 0; flex-wrap:wrap;}
+  .stat-chip{background:var(--surface-alt); border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-family:var(--font-mono); font-size:.72rem; color:var(--ink-muted);}
+  .stat-chip b{color:var(--ink);}
+
+  #detail-content{overflow:auto; min-height:0; flex:1 1 auto; margin-top:10px;}
+  table.detail-table{width:100%; border-collapse:collapse; font-size:.8rem;}
+  table.detail-table th{text-align:left; font-weight:600; color:var(--ink-muted); font-size:.68rem; padding:5px 6px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  table.detail-table td{padding:6px; border-bottom:1px solid var(--line); font-family:var(--font-mono); vertical-align:middle;}
+  table.detail-table tr.chosen{background:var(--good-soft);}
+  table.detail-table tr.expanding{background:var(--accent-soft);}
+
+  .banner{padding:9px 12px; border-radius:var(--radius-sm); font-size:.82rem; margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .banner.stuck{background:var(--bad-soft); color:#7A2530; border:1px solid #EFC3C8;}
+  .banner.capped{background:var(--hc-soft); color:#7A4409; border:1px solid var(--hc-soft-strong);}
+  .banner button{margin-left:auto; white-space:nowrap;}
+
+  /* ---------- Footer playback bar ---------- */
+  .playbar{flex:0 0 auto; background:var(--surface); border-top:1px solid var(--line); padding:10px 20px 14px;}
+  .playbar input[type=range]{width:100%; accent-color:var(--accent); display:block;}
+  .playbar-row{display:flex; align-items:center; gap:14px; margin-top:8px; flex-wrap:wrap;}
+  .playback-buttons{display:flex; align-items:center; gap:8px;}
+  .playback-buttons button{border:1px solid var(--line); background:var(--surface); color:var(--ink); font-weight:600; font-size:.85rem; padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer;}
+  .playback-buttons button.play{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .playback-buttons button:disabled{opacity:.4; cursor:not-allowed;}
+  .step-counter{font-family:var(--font-mono); font-size:.8rem; color:var(--ink-muted);}
+  .speed-field{margin-left:auto;}
+  .speed-field input{width:100px;}
+</style>
+</head>
+<body>
+<noscript>This tool needs JavaScript enabled to run the puzzle solvers.</noscript>
+
+<header class="topbar">
+  <div class="topbar-row">
+    <h1>8-Puzzle Search Lab</h1>
+    <div class="controls-row">
+      <button class="btn primary" id="btn-new-puzzle">New puzzle</button>
+      <label class="field-inline">Scramble <span class="num" id="shuffle-value">10</span>
+        <input type="range" id="shuffle-range" min="4" max="20" value="10">
+      </label>
+    </div>
+  </div>
+  <div class="algo-toggle" role="group" aria-label="Choose algorithm">
+    <button type="button" class="hc-btn" id="btn-hc" aria-pressed="true">
+      <span class="algo-name">Hill Climbing</span><span class="algo-stat" id="stat-hc"></span>
+    </button>
+    <button type="button" class="astar-btn" id="btn-astar" aria-pressed="false">
+      <span class="algo-name">A* Search</span><span class="algo-stat" id="stat-astar"></span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="col col-puzzle">
+    <div class="panel puzzle-panel">
+      <div class="puzzle-grid" id="puzzle-grid" aria-label="Current puzzle state"></div>
+      <div class="readout-row">
+        <div class="h-readout">
+          <span class="value" id="h-value">0</span>
+          <span class="caption">est. moves left (h)</span>
+        </div>
+        <div class="goal-ref">
+          <div class="mini-grid" id="goal-grid"></div>
+          goal
+        </div>
+      </div>
+      <p class="click-hint">Click a tile next to the blank to move it yourself.</p>
+    </div>
+  </section>
+
+  <section class="col col-detail">
+    <div class="panel detail-panel">
+      <div id="banner-area"></div>
+      <h2 id="detail-title">Neighbor evaluation</h2>
+      <p class="step-caption" id="step-caption"></p>
+      <div class="stat-chips" id="detail-stats"></div>
+      <div id="detail-content"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="playbar">
+  <input type="range" id="step-range" min="0" max="0" value="0" aria-label="Step scrubber">
+  <div class="playbar-row">
+    <div class="playback-buttons">
+      <button id="btn-prev" aria-label="Previous step">‹ Prev</button>
+      <button id="btn-play" class="play" aria-label="Play">▶ Play</button>
+      <button id="btn-next" aria-label="Next step">Next ›</button>
+    </div>
+    <span class="step-counter" id="step-counter">Step 1 / 1</span>
+    <label class="field-inline speed-field">Speed
+      <input type="range" id="speed-range" min="120" max="1200" value="500" step="10">
+    </label>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+/* =========================================================
+   PUZZLE CORE
+   ========================================================= */
+const GOAL = [1,2,3,4,5,6,7,8,0];
+
+function key(stateArr){ return stateArr.join(","); }
+function arraysEqual(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
+function swap(stateArr,i,j){
+  const s = stateArr.slice();
+  const t = s[i]; s[i] = s[j]; s[j] = t;
+  return s;
+}
+function getNeighbors(stateArr){
+  const blank = stateArr.indexOf(0);
+  const row = Math.floor(blank/3), col = blank%3;
+  const moves = [];
+  if(row>0) moves.push(["Up", swap(stateArr, blank, blank-3)]);
+  if(row<2) moves.push(["Down", swap(stateArr, blank, blank+3)]);
+  if(col>0) moves.push(["Left", swap(stateArr, blank, blank-1)]);
+  if(col<2) moves.push(["Right", swap(stateArr, blank, blank+1)]);
+  return moves;
+}
+function isAdjacent(posA, posB){
+  const r1=Math.floor(posA/3), c1=posA%3;
+  const r2=Math.floor(posB/3), c2=posB%3;
+  return (Math.abs(r1-r2)+Math.abs(c1-c2)) === 1;
+}
+function manhattan(stateArr){
+  let total = 0;
+  for(let v=1; v<=8; v++){
+    const pos = stateArr.indexOf(v);
+    const goalPos = v-1; // GOAL = [1..8,0], so value v lives at index v-1 when solved
+    const r1=Math.floor(pos/3), c1=pos%3;
+    const r2=Math.floor(goalPos/3), c2=goalPos%3;
+    total += Math.abs(r1-r2)+Math.abs(c1-c2);
+  }
+  return total;
+}
+function makeScrambled(moves){
+  let state = GOAL.slice();
+  let lastState = null;
+  for(let i=0; i<moves; i++){
+    let options = getNeighbors(state);
+    if(lastState){
+      const filtered = options.filter(([,ns]) => key(ns) !== key(lastState));
+      if(filtered.length>0) options = filtered;
+    }
+    const choice = options[Math.floor(Math.random()*options.length)];
+    lastState = state;
+    state = choice[1];
+  }
+  return state;
+}
+
+/* =========================================================
+   SOLVER 1 — HILL CLIMBING (steepest-ascent, no backtracking)
+   ========================================================= */
+function solveHillClimbing(start, maxSteps){
+  maxSteps = maxSteps || 1000;
+  const trace = [];
+  let current = start;
+  let success = false, stuck = false;
+
+  for(let step=0; step<maxSteps; step++){
+    const currentH = manhattan(current);
+    const isGoal = arraysEqual(current, GOAL);
+    const neighborEvals = getNeighbors(current).map(([move, ns]) => ({move, state: ns, h: manhattan(ns)}));
+
+    let bestIdx = -1, bestH = currentH;
+    neighborEvals.forEach((n, idx) => { if(n.h < bestH){ bestH = n.h; bestIdx = idx; } });
+
+    trace.push({
+      state: current, h: currentH, isGoal,
+      neighbors: neighborEvals, chosenIndex: bestIdx,
+      stuckHere: !isGoal && bestIdx === -1,
+    });
+
+    if(isGoal){ success = true; break; }
+    if(bestIdx === -1){ stuck = true; break; }
+    current = neighborEvals[bestIdx].state;
+  }
+  return { trace, success, stuck, steps: trace.length-1 };
+}
+
+/* =========================================================
+   SOLVER 2 — A* SEARCH (priority queue, f = g + h)
+   ========================================================= */
+class MinHeap{
+  constructor(cmp){ this.data = []; this.cmp = cmp; }
+  size(){ return this.data.length; }
+  push(item){ this.data.push(item); this._up(this.data.length-1); }
+  pop(){
+    const top = this.data[0];
+    const last = this.data.pop();
+    if(this.data.length>0){ this.data[0] = last; this._down(0); }
+    return top;
+  }
+  _up(i){
+    while(i>0){
+      const p = (i-1)>>1;
+      if(this.cmp(this.data[i], this.data[p]) < 0){
+        [this.data[i], this.data[p]] = [this.data[p], this.data[i]]; i = p;
+      } else break;
+    }
+  }
+  _down(i){
+    const n = this.data.length;
+    while(true){
+      let l=2*i+1, r=2*i+2, smallest=i;
+      if(l<n && this.cmp(this.data[l], this.data[smallest])<0) smallest=l;
+      if(r<n && this.cmp(this.data[r], this.data[smallest])<0) smallest=r;
+      if(smallest!==i){ [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]]; i=smallest; }
+      else break;
+    }
+  }
+}
+function topKByF(arr, k){
+  const top = [];
+  for(const item of arr){
+    if(top.length < k){ top.push(item); top.sort((a,b)=>a.f-b.f); }
+    else if(item.f < top[top.length-1].f){ top[top.length-1] = item; top.sort((a,b)=>a.f-b.f); }
+  }
+  return top;
+}
+function solveAStar(start, maxIterations){
+  maxIterations = maxIterations || 6000;
+  const heap = new MinHeap((a,b) => a.f - b.f);
+  const startH = manhattan(start);
+  heap.push({ state:start, g:0, h:startH, f:startH });
+  const bestG = new Map([[key(start), 0]]);
+  const trace = [];
+  let iterations = 0, solved = false, capped = false;
+
+  while(heap.size() > 0){
+    if(iterations >= maxIterations){ capped = true; break; }
+    const node = heap.pop();
+    iterations++;
+
+    const record = {
+      node: { state: node.state, g: node.g, h: node.h, f: node.f },
+      neighborsAdded: [],
+      goal: arraysEqual(node.state, GOAL),
+      closedSize: iterations,
+    };
+
+    if(record.goal){
+      solved = true;
+      record.openSizeAfter = heap.size();
+      record.openTop = topKByF(heap.data, 5);
+      trace.push(record);
+      break;
+    }
+
+    for(const [move, ns] of getNeighbors(node.state)){
+      const k = key(ns);
+      const newG = node.g + 1;
+      if(!bestG.has(k) || newG < bestG.get(k)){
+        bestG.set(k, newG);
+        const h = manhattan(ns);
+        const f = newG + h;
+        heap.push({ state: ns, g: newG, h, f });
+        record.neighborsAdded.push({ move, state: ns, g: newG, h, f });
+      }
+    }
+    record.openSizeAfter = heap.size();
+    record.openTop = topKByF(heap.data, 5);
+    trace.push(record);
+  }
+  return { trace, success: solved, capped, iterations };
+}
+
+/* =========================================================
+   RENDERING HELPERS
+   ========================================================= */
+function createPuzzleGridRenderer(container, onMove){
+  const tileEls = {};
+  for(let v=0; v<9; v++){
+    const d = document.createElement("div");
+    d.className = "tile" + (v===0 ? " is-blank" : "");
+    d.textContent = v===0 ? "" : String(v);
+    if(v!==0){
+      d.addEventListener("click", () => handleTileClick(v));
+    }
+    container.appendChild(d);
+    tileEls[v] = d;
+  }
+  let currentState = null;
+
+  function handleTileClick(value){
+    if(!currentState) return;
+    const tilePos = currentState.indexOf(value);
+    const blankPos = currentState.indexOf(0);
+    if(isAdjacent(tilePos, blankPos)){
+      onMove(swap(currentState, tilePos, blankPos));
+    } else {
+      const el = tileEls[value];
+      el.classList.remove("invalid");
+      void el.offsetWidth; // restart the flash if clicked again quickly
+      el.classList.add("invalid");
+      setTimeout(() => el.classList.remove("invalid"), 300);
+    }
+  }
+
+  return function render(stateArr){
+    const blankPos = stateArr.indexOf(0);
+    for(let v=0; v<9; v++){
+      const pos = stateArr.indexOf(v);
+      const row = Math.floor(pos/3), col = pos%3;
+      tileEls[v].style.transform = `translate(${col*100}%, ${row*100}%)`;
+      if(currentState && v!==0){
+        const prevPos = currentState.indexOf(v);
+        if(prevPos !== pos){
+          tileEls[v].classList.add("is-moving");
+          setTimeout(() => tileEls[v].classList.remove("is-moving"), 350);
+        }
+      }
+      if(v!==0){
+        tileEls[v].classList.toggle("movable", isAdjacent(pos, blankPos));
+      }
+    }
+    currentState = stateArr.slice();
+  };
+}
+function renderMiniGrid(container, stateArr){
+  container.innerHTML = "";
+  for(let i=0; i<9; i++){
+    const v = stateArr[i];
+    const d = document.createElement("div");
+    d.className = "mt" + (v===0 ? " blank" : "");
+    d.textContent = v===0 ? "" : v;
+    container.appendChild(d);
+  }
+}
+
+/* =========================================================
+   APP STATE
+   ========================================================= */
+const appState = {
+  start: null,
+  results: { hc: null, astar: null },
+  activeAlgo: "hc",
+  stepIndex: { hc: 0, astar: 0 },
+  manualState: null,
+  playing: false,
+  playTimer: null,
+  speed: 500,
+  shuffleMoves: 10,
+};
+
+const puzzleGridEl = document.getElementById("puzzle-grid");
+const renderPuzzle = createPuzzleGridRenderer(puzzleGridEl, handlePlayerMove);
+const goalGridEl = document.getElementById("goal-grid");
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+function newPuzzle(){
+  stopPlaying();
+  appState.manualState = null;
+  appState.start = makeScrambled(appState.shuffleMoves);
+  appState.results.hc = solveHillClimbing(appState.start);
+  appState.results.astar = solveAStar(appState.start);
+  appState.stepIndex = { hc: 0, astar: 0 };
+  renderAll();
+}
+function setAlgo(algo){
+  if(appState.activeAlgo === algo) return;
+  stopPlaying();
+  appState.manualState = null;
+  appState.activeAlgo = algo;
+  renderAll();
+}
+function stepNext(){
+  appState.manualState = null;
+  const algo = appState.activeAlgo;
+  const trace = appState.results[algo].trace;
+  if(appState.stepIndex[algo] < trace.length-1){
+    appState.stepIndex[algo]++;
+    renderAll();
+  } else {
+    stopPlaying();
+  }
+}
+function stepPrev(){
+  appState.manualState = null;
+  const algo = appState.activeAlgo;
+  if(appState.stepIndex[algo] > 0){
+    appState.stepIndex[algo]--;
+    renderAll();
+  }
+}
+function togglePlay(){
+  if(appState.playing){ stopPlaying(); return; }
+  appState.manualState = null;
+  const algo = appState.activeAlgo;
+  if(appState.stepIndex[algo] >= appState.results[algo].trace.length-1){
+    appState.stepIndex[algo] = 0;
+  }
+  appState.playing = true;
+  appState.playTimer = setInterval(stepNext, appState.speed);
+  renderAll();
+}
+function handlePlayerMove(newState){
+  stopPlaying();
+  appState.manualState = newState;
+  renderAll();
+}
+function stopPlaying(){
+  appState.playing = false;
+  if(appState.playTimer){ clearInterval(appState.playTimer); appState.playTimer = null; }
+  const btn = document.getElementById("btn-play");
+  if(btn) btn.textContent = "\u25B6 Play";
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function currentStepState(){
+  const algo = appState.activeAlgo;
+  const trace = appState.results[algo].trace;
+  const idx = Math.min(appState.stepIndex[algo], trace.length-1);
+  return algo === "hc" ? trace[idx].state : trace[idx].node.state;
+}
+function getDisplayState(){
+  return appState.manualState || currentStepState();
+}
+function resultLabelFor(algo, result){
+  if(result.success) return { text:"Solved", cls:"good" };
+  if(algo==="hc" && result.stuck) return { text:"Stuck", cls:"bad" };
+  if(algo==="astar" && result.capped) return { text:"Capped", cls:"bad" };
+  return { text:"Stopped", cls:"bad" };
+}
+function summaryText(algo, result){
+  const n = algo==="hc" ? result.steps : result.iterations;
+  const unit = algo==="hc" ? (n===1?"move":"moves") : (n===1?"exp.":"exp.");
+  const r = resultLabelFor(algo, result);
+  return `${n} ${unit} \u00B7 ${r.text}`;
+}
+function renderAll(){
+  document.documentElement.setAttribute("data-algo", appState.activeAlgo);
+  document.getElementById("btn-hc").setAttribute("aria-pressed", String(appState.activeAlgo==="hc"));
+  document.getElementById("btn-astar").setAttribute("aria-pressed", String(appState.activeAlgo==="astar"));
+  document.getElementById("stat-hc").textContent = summaryText("hc", appState.results.hc);
+  document.getElementById("stat-astar").textContent = summaryText("astar", appState.results.astar);
+
+  renderStepArea();
+  renderBanner();
+  renderDetail();
+  renderPlaybackControls();
+}
+function renderStepArea(){
+  const stateArr = getDisplayState();
+  renderPuzzle(stateArr);
+  document.getElementById("h-value").textContent = manhattan(stateArr);
+}
+function renderBanner(){
+  const area = document.getElementById("banner-area");
+  area.innerHTML = "";
+  const algo = appState.activeAlgo;
+  const result = appState.results[algo];
+  if(result.success) return;
+
+  const banner = document.createElement("div");
+  if(algo==="hc" && result.stuck){
+    banner.className = "banner stuck";
+    banner.innerHTML = `<span>\u26D4 Stuck after ${result.steps} move${result.steps===1?"":"s"} \u2014 every neighbor was equal or worse.</span>`;
+    const btn = document.createElement("button");
+    btn.className = "btn"; btn.textContent = "Switch to A*";
+    btn.addEventListener("click", () => setAlgo("astar"));
+    banner.appendChild(btn);
+  } else if(algo==="astar" && result.capped){
+    banner.className = "banner capped";
+    banner.innerHTML = `<span>\u26A0\uFE0F Needed more searching than allowed here (stopped after ${result.iterations} expansions). Try a smaller scramble.</span>`;
+  } else {
+    return;
+  }
+  area.appendChild(banner);
+}
+function stepCaption(){
+  if(appState.manualState){
+    return `Your move \u2014 h is now ${manhattan(appState.manualState)}. Press Play, Next, or the scrubber to return to the walkthrough.`;
+  }
+  const algo = appState.activeAlgo;
+  const trace = appState.results[algo].trace;
+  const idx = Math.min(appState.stepIndex[algo], trace.length-1);
+  if(algo==="hc"){
+    const rec = trace[idx];
+    if(rec.isGoal) return "This is the goal state \u2014 solved!";
+    if(rec.stuckHere) return `Local optimum \u2014 every neighbor has h \u2265 ${rec.h}, so the search stops here.`;
+    const chosen = rec.neighbors[rec.chosenIndex];
+    return `Current h = ${rec.h}. ${chosen.move} improves h to ${chosen.h}, so it's chosen next.`;
+  } else {
+    const rec = trace[idx];
+    if(rec.goal) return "This node is the goal, and it had the lowest f in the queue \u2014 so this path is guaranteed shortest.";
+    return `Expanding the state with the lowest f in the queue (f = ${rec.node.f} = g ${rec.node.g} + h ${rec.node.h}).`;
+  }
+}
+function renderDetail(){
+  const algo = appState.activeAlgo;
+  const trace = appState.results[algo].trace;
+  const idx = Math.min(appState.stepIndex[algo], trace.length-1);
+  document.getElementById("detail-title").textContent = algo==="hc" ? "Neighbor evaluation" : "Open set (priority queue)";
+  document.getElementById("step-caption").textContent = stepCaption();
+
+  const statsEl = document.getElementById("detail-stats");
+  const contentEl = document.getElementById("detail-content");
+  statsEl.innerHTML = ""; contentEl.innerHTML = "";
+
+  if(algo==="hc"){
+    const rec = trace[idx];
+    const state = appState.manualState || rec.state;
+    const h = manhattan(state);
+    const neighborEvals = getNeighbors(state).map(([move, ns]) => ({move, state: ns, h: manhattan(ns)}));
+    let bestIdx = -1, bestH = h;
+    neighborEvals.forEach((n, i) => { if(n.h < bestH){ bestH = n.h; bestIdx = i; } });
+
+    const table = document.createElement("table");
+    table.className = "detail-table";
+    table.innerHTML = `<thead><tr><th>Move</th><th>Resulting h</th><th>Compared to h=${h}</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    if(neighborEvals.length===0){
+      tbody.innerHTML = `<tr><td colspan="3" style="color:var(--ink-muted);">No legal moves.</td></tr>`;
+    }
+    neighborEvals.forEach((n, i) => {
+      const tr = document.createElement("tr");
+      if(i===bestIdx) tr.className = "chosen";
+      const cmp = n.h < h ? "\u2193 better" : (n.h > h ? "\u2191 worse" : "\u2013 equal");
+      tr.innerHTML = `<td>${n.move}</td><td>${n.h}</td><td>${cmp}${i===bestIdx ? ' <span class="tag good">chosen</span>' : ""}</td>`;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    contentEl.appendChild(table);
+  } else if(appState.manualState){
+    contentEl.innerHTML = `<p style="color:var(--ink-muted); font-size:.85rem;">Playing manually \u2014 the search view resumes once you press Play, step, or use the scrubber.</p>`;
+  } else {
+    const rec = trace[idx];
+    statsEl.innerHTML = `<span class="stat-chip">Expanded: <b>${rec.closedSize}</b></span><span class="stat-chip">Queued: <b>${rec.openSizeAfter}</b></span>`;
+
+    const table = document.createElement("table");
+    table.className = "detail-table";
+    table.innerHTML = `<thead><tr><th>State</th><th>g</th><th>h</th><th>f</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+
+    const expandTr = document.createElement("tr");
+    expandTr.className = "expanding";
+    expandTr.innerHTML = `<td></td><td>${rec.node.g}</td><td>${rec.node.h}</td><td>${rec.node.f}</td>`;
+    const expandMini = document.createElement("div");
+    expandMini.className = "mini-grid";
+    expandTr.children[0].appendChild(expandMini);
+    tbody.appendChild(expandTr);
+    renderMiniGrid(expandMini, rec.node.state);
+
+    const labelTr = document.createElement("tr");
+    labelTr.innerHTML = `<td colspan="4" style="font-family:var(--font-sans); font-size:.68rem; color:var(--ink-muted); border-bottom:none; padding-top:8px;">\u2191 expanding now &nbsp;\u00B7&nbsp; next up \u2193</td>`;
+    tbody.appendChild(labelTr);
+
+    (rec.openTop || []).forEach(n => {
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td");
+      const mg = document.createElement("div"); mg.className = "mini-grid";
+      td0.appendChild(mg);
+      tr.appendChild(td0);
+      [n.g, n.h, n.f].forEach(val => {
+        const td = document.createElement("td"); td.textContent = val; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+      renderMiniGrid(mg, n.state);
+    });
+    if((rec.openTop || []).length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="4" style="color:var(--ink-muted);">Queue is empty.</td>`;
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    contentEl.appendChild(table);
+  }
+}
+function renderPlaybackControls(){
+  const algo = appState.activeAlgo;
+  const trace = appState.results[algo].trace;
+  const idx = appState.stepIndex[algo];
+  const range = document.getElementById("step-range");
+  range.max = trace.length-1;
+  range.value = idx;
+  document.getElementById("step-counter").textContent = `Step ${idx+1} / ${trace.length}`;
+  document.getElementById("btn-prev").disabled = idx<=0;
+  document.getElementById("btn-next").disabled = idx>=trace.length-1;
+  document.getElementById("btn-play").textContent = appState.playing ? "\u275A\u275A Pause" : "\u25B6 Play";
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+document.getElementById("btn-hc").addEventListener("click", () => setAlgo("hc"));
+document.getElementById("btn-astar").addEventListener("click", () => setAlgo("astar"));
+document.getElementById("btn-new-puzzle").addEventListener("click", newPuzzle);
+document.getElementById("shuffle-range").addEventListener("input", e => {
+  appState.shuffleMoves = parseInt(e.target.value, 10);
+  document.getElementById("shuffle-value").textContent = appState.shuffleMoves;
+});
+document.getElementById("btn-prev").addEventListener("click", () => { stopPlaying(); stepPrev(); });
+document.getElementById("btn-next").addEventListener("click", () => { stopPlaying(); stepNext(); });
+document.getElementById("btn-play").addEventListener("click", togglePlay);
+document.getElementById("step-range").addEventListener("input", e => {
+  stopPlaying();
+  appState.manualState = null;
+  appState.stepIndex[appState.activeAlgo] = parseInt(e.target.value, 10);
+  renderAll();
+});
+document.getElementById("speed-range").addEventListener("input", e => {
+  appState.speed = parseInt(e.target.value, 10);
+  if(appState.playing){ stopPlaying(); togglePlay(); }
+});
+document.addEventListener("keydown", e => {
+  if(e.target.tagName === "INPUT") return;
+  if(e.key === "ArrowRight"){ e.preventDefault(); stopPlaying(); stepNext(); }
+  else if(e.key === "ArrowLeft"){ e.preventDefault(); stopPlaying(); stepPrev(); }
+  else if(e.key === " "){ e.preventDefault(); togglePlay(); }
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderMiniGrid(goalGridEl, GOAL);
+newPuzzle();
+</script>
+</body>
+</html>
